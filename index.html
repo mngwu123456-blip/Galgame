@@ -1,0 +1,1696 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0b0910">
+<title>墨南宫 · 一场梦 · V7</title>
+
+<style>
+:root{
+  --bg:#0b0910;
+  --panel:rgba(11,9,15,.91);
+  --panel-strong:rgba(8,7,11,.96);
+  --line:rgba(255,255,255,.18);
+  --text:#f7f4fa;
+  --muted:rgba(255,255,255,.58);
+  --accent:rgba(126,91,150,.92);
+}
+
+*{
+  box-sizing:border-box;
+  margin:0;
+  padding:0;
+}
+
+html,body{
+  width:100%;
+  height:100%;
+  background:var(--bg);
+  color:var(--text);
+  font-family:"Microsoft YaHei","PingFang SC",sans-serif;
+}
+
+body{
+  overflow:hidden;
+}
+
+button{
+  font:inherit;
+  -webkit-tap-highlight-color:transparent;
+}
+
+#game{
+  position:relative;
+  width:100vw;
+  height:100vh;
+  overflow:hidden;
+  background:#211b27;
+  touch-action:manipulation;
+}
+
+/* ---------- 场景 ---------- */
+.scene-layer{
+  position:absolute;
+  inset:0;
+  background-color:#29232f;
+  background-position:center;
+  background-repeat:no-repeat;
+  background-size:cover;
+}
+
+.scene-layer--front{
+  opacity:1;
+  transition:opacity .18s ease;
+  z-index:1;
+}
+
+.scene-layer--back{
+  opacity:0;
+  transition:opacity .18s ease;
+  z-index:2;
+}
+
+.scene-vignette{
+  position:absolute;
+  inset:0;
+  z-index:4;
+  pointer-events:none;
+  background:
+    linear-gradient(
+      180deg,
+      rgba(10,7,14,.10) 0%,
+      rgba(10,7,14,.16) 46%,
+      rgba(7,5,10,.74) 100%
+    );
+}
+
+/* ---------- 人物 ---------- */
+.character-layer{
+  position:absolute;
+  left:50%;
+  bottom:19%;
+  z-index:6;
+
+  max-width:min(88vw,760px);
+  max-height:74vh;
+  width:auto;
+  height:auto;
+
+  transform:translateX(-50%);
+  object-fit:contain;
+
+  opacity:0;
+  pointer-events:none;
+
+  filter:drop-shadow(0 9px 22px rgba(0,0,0,.56));
+  transition:opacity .16s ease;
+}
+
+.character-layer.is-visible{
+  opacity:1;
+}
+
+/* ---------- 章节 ---------- */
+#chapterLabel{
+  position:absolute;
+  top:max(14px,env(safe-area-inset-top));
+  left:14px;
+  z-index:20;
+
+  max-width:75vw;
+  padding:6px 11px;
+
+  border:1px solid var(--line);
+  border-radius:999px;
+  background:rgba(10,8,14,.42);
+  backdrop-filter:blur(8px);
+
+  color:#eee;
+  font-size:12px;
+  letter-spacing:1.5px;
+}
+
+/* ---------- 对白 ---------- */
+#dialoguePanel{
+  position:absolute;
+  left:3.5%;
+  right:3.5%;
+  bottom:max(14px,env(safe-area-inset-bottom));
+  z-index:30;
+}
+
+#dialogueBox{
+  position:relative;
+
+  min-height:150px;
+  padding:16px 19px 31px;
+
+  border:1px solid var(--line);
+  border-radius:15px;
+
+  background:
+    linear-gradient(
+      180deg,
+      var(--panel),
+      var(--panel-strong)
+    );
+
+  box-shadow:0 12px 42px rgba(0,0,0,.46);
+  backdrop-filter:blur(10px);
+
+  cursor:pointer;
+}
+
+#speakerName{
+  display:inline-flex;
+  align-items:center;
+
+  min-height:29px;
+  padding:3px 11px;
+  margin-bottom:8px;
+
+  border-radius:7px;
+  background:var(--accent);
+
+  font-size:15px;
+  font-weight:700;
+}
+
+#speakerName.is-empty{
+  display:none;
+}
+
+#dialogueText{
+  min-height:72px;
+
+  color:var(--text);
+  font-size:20px;
+  line-height:1.76;
+
+  white-space:pre-wrap;
+  word-break:break-word;
+}
+
+#dialogueHint{
+  position:absolute;
+  right:16px;
+  bottom:9px;
+
+  color:var(--muted);
+  font-size:11px;
+}
+
+/* ---------- 选项 ---------- */
+#choicePanel{
+  position:absolute;
+  left:4.5%;
+  right:4.5%;
+  bottom:max(14px,env(safe-area-inset-bottom));
+  z-index:50;
+
+  display:flex;
+  flex-direction:column;
+  gap:9px;
+
+  max-height:76vh;
+  overflow:auto;
+
+  padding:3px;
+}
+
+.choice-button{
+  width:100%;
+  padding:13px 15px;
+
+  border:1px solid rgba(255,255,255,.20);
+  border-radius:11px;
+
+  background:rgba(13,10,18,.96);
+  color:var(--text);
+
+  text-align:left;
+  box-shadow:0 5px 18px rgba(0,0,0,.28);
+
+  cursor:pointer;
+}
+
+.choice-button:hover,
+.choice-button:active{
+  background:rgba(99,72,119,.96);
+}
+
+.choice-button:disabled{
+  opacity:.55;
+}
+
+/* ---------- 开始/结尾覆盖层 ---------- */
+.screen-overlay{
+  position:absolute;
+  inset:0;
+  z-index:80;
+
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+
+  padding:30px;
+  text-align:center;
+
+  background:
+    radial-gradient(
+      circle at 50% 40%,
+      rgba(99,72,119,.22),
+      rgba(8,6,11,.95) 69%
+    );
+}
+
+.screen-overlay h1{
+  margin:0 0 10px;
+  font-size:clamp(40px,10vw,72px);
+  letter-spacing:.24em;
+}
+
+.screen-overlay p{
+  margin:0 0 28px;
+  line-height:1.85;
+  color:#d0c8d6;
+}
+
+.main-button{
+  padding:13px 40px;
+
+  border:1px solid rgba(255,255,255,.24);
+  border-radius:10px;
+
+  background:rgba(105,78,126,.82);
+  color:#fff;
+
+  cursor:pointer;
+}
+
+.is-hidden{
+  display:none !important;
+}
+
+/* ---------- 转场 ---------- */
+#transitionCover{
+  position:absolute;
+  inset:0;
+  z-index:70;
+
+  background:#000;
+  opacity:0;
+
+  pointer-events:none;
+  transition:opacity .18s ease;
+}
+
+/* ---------- 手机 ---------- */
+@media(max-width:700px){
+  .character-layer{
+    bottom:23%;
+    max-width:94vw;
+    max-height:59vh;
+  }
+
+  #dialoguePanel{
+    left:3%;
+    right:3%;
+    bottom:2%;
+  }
+
+  #dialogueBox{
+    min-height:158px;
+    padding:14px 16px 28px;
+    border-radius:14px;
+  }
+
+  #dialogueText{
+    font-size:18px;
+    line-height:1.73;
+  }
+
+  #speakerName{
+    font-size:15px;
+  }
+
+  #chapterLabel{
+    left:9px;
+    font-size:11px;
+  }
+
+  #choicePanel{
+    left:3.5%;
+    right:3.5%;
+    bottom:2.5%;
+    gap:8px;
+  }
+
+  .choice-button{
+    font-size:16px;
+    padding:12px 13px;
+  }
+}
+
+@media(prefers-reduced-motion:reduce){
+  .scene-layer,
+  .character-layer,
+  #transitionCover{
+    transition:none !important;
+  }
+}
+
+/* ---------- 固定层级：不要修改 position 模型 ---------- */
+#dialoguePanel{ z-index:30; }
+#choicePanel{ z-index:50; pointer-events:auto; }
+.choice-button{ position:relative; z-index:51; pointer-events:auto; }
+#transitionCover{ z-index:100; pointer-events:none; }
+#startScreen,#endScreen{ z-index:200; }
+</style>
+</head>
+
+<body>
+<div id="game">
+
+  <div id="backgroundFront" class="scene-layer scene-layer--front"></div>
+  <div id="backgroundBack" class="scene-layer scene-layer--back"></div>
+  <div class="scene-vignette"></div>
+
+  <img id="characterFront" class="character-layer" alt="">
+  <img id="characterBack" class="character-layer" alt="">
+
+  <div id="chapterLabel"></div>
+
+  <div id="transitionCover"></div>
+
+  <section id="dialoguePanel" class="is-hidden" aria-live="polite">
+    <div id="dialogueBox">
+      <div id="speakerName"></div>
+      <div id="dialogueText"></div>
+      <div id="dialogueHint">点击继续</div>
+    </div>
+  </section>
+
+  <section id="choicePanel" class="is-hidden" aria-label="剧情选择"></section>
+
+  <section id="startScreen" class="screen-overlay">
+    <h1>墨南宫</h1>
+    <p>一场梦</p>
+    <button id="startButton" class="main-button" type="button">开始游戏</button>
+  </section>
+
+  <section id="endScreen" class="screen-overlay is-hidden">
+    <h1>墨南宫</h1>
+    <p>故事结束。<br>有些梦醒了以后，仍然会留下记忆。</p>
+    <button id="restartButton" class="main-button" type="button">重新开始</button>
+  </section>
+
+</div>
+
+<script>
+"use strict";
+
+/* =========================================================
+   《墨南宫》V7 · 结构收口版
+   单一导航 / 单一推进 / 单一渲染
+   原则：一个导航器、一个推进器、一个渲染器、一个转场时长。
+   选择界面出现时暂时隐藏对白框，避免任何层级/遮挡冲突。
+========================================================= */
+
+/* ---------- DOM：全部显式获取 ---------- */
+const elements = {
+  game: document.getElementById("game"),
+  backgroundFront: document.getElementById("backgroundFront"),
+  backgroundBack: document.getElementById("backgroundBack"),
+  characterFront: document.getElementById("characterFront"),
+  characterBack: document.getElementById("characterBack"),
+  chapterLabel: document.getElementById("chapterLabel"),
+  transitionCover: document.getElementById("transitionCover"),
+  dialoguePanel: document.getElementById("dialoguePanel"),
+  dialogueBox: document.getElementById("dialogueBox"),
+  speakerName: document.getElementById("speakerName"),
+  dialogueText: document.getElementById("dialogueText"),
+  dialogueHint: document.getElementById("dialogueHint"),
+  choicePanel: document.getElementById("choicePanel"),
+  startScreen: document.getElementById("startScreen"),
+  endScreen: document.getElementById("endScreen"),
+  startButton: document.getElementById("startButton"),
+  restartButton: document.getElementById("restartButton")
+};
+
+/* ---------- 素材路径 ---------- */
+const IMAGE = {
+  backgrounds: {
+    roomMorning: "images/backgrounds/room_morning.jpg",
+    kitchen: "images/backgrounds/kitchen.jpg",
+    hospital: "images/backgrounds/hospital.jpg",
+    hospitalRoom: "images/backgrounds/hospital_room.jpg",
+    pharmacy: "images/backgrounds/pharmacy.jpg",
+    mall: "images/backgrounds/mall.jpg",
+    foxRoom: "images/backgrounds/fox_room.jpg",
+    cinema: "images/backgrounds/cinema.jpg",
+    streetNight: "images/backgrounds/street_night.jpg",
+    alley: "images/backgrounds/alley.jpg",
+    roomNight: "images/backgrounds/room_night.jpg",
+    dorm: "images/backgrounds/dorm.jpg",
+    corridor: "images/backgrounds/corridor.jpg"
+  },
+  characters: {
+    nangongNormal: "images/characters/nangong_normal.png",
+    nangongTired: "images/characters/nangong_tired.png",
+    nangongFever: "images/characters/nangong_fever.png",
+    nangongPained: "images/characters/nangong_pained.png",
+    nangongHesitate: "images/characters/nangong_hesitate.png",
+    nangongHappy: "images/characters/nangong_happy.png"
+  }
+};
+
+/* ---------- 剧情状态：只有这些变量参与分支 ---------- */
+const TRANSITION_MS = 180;
+
+const state = {
+  careScore: 0,
+  breakfast: "",
+  temperatureRoute: "",
+  hospitalRoute: "",
+  bloodRoute: "",
+  movieTicket: "",
+  foxRoute: "",
+  movieRoute: "",
+  homeRoute: "",
+  alleyRoute: "",
+  homeCare: "",
+  finalAnswer: ""
+};
+
+/* ---------- 运行状态：只有一个推进器 ---------- */
+const runtime = {
+  currentNodeId: null,
+  isTyping: false,
+  typeTimer: null,
+  fullText: "",
+  typeIndex: 0,
+  transitionBusy: false,
+  transitionToken: 0,
+  choiceLocked: false,
+  activeBackgroundLayer: elements.backgroundFront,
+  activeCharacterLayer: elements.characterFront,
+  loadedImages: new Map()
+};
+
+/* =========================================================
+   工具
+========================================================= */
+
+function resetGameState() {
+  Object.keys(state).forEach((key) => {
+    state[key] = key === "careScore" ? 0 : "";
+  });
+}
+
+function clearTyping() {
+  if (runtime.typeTimer !== null) {
+    window.clearInterval(runtime.typeTimer);
+    runtime.typeTimer = null;
+  }
+  runtime.isTyping = false;
+}
+
+function hideChoices() {
+  runtime.choiceLocked = true;
+  elements.choicePanel.classList.add("is-hidden");
+  elements.choicePanel.replaceChildren();
+}
+
+function showDialogue() {
+  elements.dialoguePanel.classList.remove("is-hidden");
+}
+
+function hideDialogue() {
+  elements.dialoguePanel.classList.add("is-hidden");
+}
+
+function showEndScreen() {
+  clearTyping();
+  hideChoices();
+  hideDialogue();
+  elements.endScreen.classList.remove("is-hidden");
+}
+
+function preloadImage(src) {
+  if (!src) return Promise.resolve(false);
+  if (runtime.loadedImages.has(src)) {
+    return runtime.loadedImages.get(src);
+  }
+
+  const promise = new Promise((resolve) => {
+    const image = new Image();
+    image.onload = () => resolve(true);
+    image.onerror = () => resolve(false);
+    image.src = src;
+  });
+
+  runtime.loadedImages.set(src, promise);
+  return promise;
+}
+
+/* =========================================================
+   双层背景 / 双层立绘
+   注意：只有当前渲染器可以调用这两个函数。
+========================================================= */
+
+async function setBackground(src) {
+  const nextLayer =
+    runtime.activeBackgroundLayer === elements.backgroundFront
+      ? elements.backgroundBack
+      : elements.backgroundFront;
+
+  if (!src) {
+    nextLayer.style.backgroundImage = "";
+    nextLayer.style.backgroundColor = "#29232f";
+    nextLayer.style.opacity = "1";
+  } else {
+    const loaded = await preloadImage(src);
+
+    if (loaded) {
+      nextLayer.style.backgroundImage = `url("${src}")`;
+      nextLayer.style.backgroundColor = "transparent";
+    } else {
+      nextLayer.style.backgroundImage = "";
+      nextLayer.style.backgroundColor = "#29232f";
+    }
+
+    nextLayer.style.opacity = "1";
+  }
+
+  runtime.activeBackgroundLayer.style.opacity = "0";
+  runtime.activeBackgroundLayer = nextLayer;
+}
+
+async function setCharacter(src) {
+  const nextLayer =
+    runtime.activeCharacterLayer === elements.characterFront
+      ? elements.characterBack
+      : elements.characterFront;
+
+  if (!src) {
+    elements.characterFront.classList.remove("is-visible");
+    elements.characterBack.classList.remove("is-visible");
+    elements.characterFront.removeAttribute("src");
+    elements.characterBack.removeAttribute("src");
+    runtime.activeCharacterLayer = elements.characterFront;
+    return;
+  }
+
+  const loaded = await preloadImage(src);
+
+  if (!loaded) {
+    elements.characterFront.classList.remove("is-visible");
+    elements.characterBack.classList.remove("is-visible");
+    return;
+  }
+
+  nextLayer.src = src;
+  nextLayer.classList.add("is-visible");
+
+  const oldLayer = runtime.activeCharacterLayer;
+  runtime.activeCharacterLayer = nextLayer;
+
+  window.setTimeout(() => {
+    if (oldLayer !== runtime.activeCharacterLayer) {
+      oldLayer.classList.remove("is-visible");
+      oldLayer.removeAttribute("src");
+    }
+  }, TRANSITION_MS);
+}
+
+/* =========================================================
+   打字机
+   规则：
+   1. 打字中点击：只显示全文
+   2. 打字完成后再次点击：才推进/出现选择
+========================================================= */
+
+function finishTyping() {
+  if (!runtime.isTyping) return;
+
+  clearTyping();
+  elements.dialogueText.textContent = runtime.fullText;
+  elements.dialogueHint.textContent = "点击继续";
+}
+
+function startTyping(text) {
+  clearTyping();
+
+  runtime.fullText = String(text || "");
+  elements.dialogueText.textContent = "";
+  elements.dialogueHint.textContent =
+    runtime.fullText ? "点击显示全文" : "点击继续";
+
+  if (!runtime.fullText) {
+    runtime.isTyping = false;
+    return;
+  }
+
+  runtime.isTyping = true;
+
+  const interval = 30;
+
+  runtime.typeTimer = window.setInterval(() => {
+    const nextLength = Math.min(
+      runtime.fullText.length,
+      elements.dialogueText.textContent.length + 1
+    );
+
+    elements.dialogueText.textContent =
+      runtime.fullText.slice(0, nextLength);
+
+    if (nextLength >= runtime.fullText.length) {
+      finishTyping();
+    }
+  }, interval);
+}
+
+/* =========================================================
+   剧情数据
+   每个 choices 的第一项 = 小说原路线。
+========================================================= */
+
+const story = {
+  start: {
+    chapter: "序章",
+    background: IMAGE.backgrounds.roomMorning,
+    character: null,
+    speaker: "",
+    text: "清晨。\n\n阳光透过窗帘落进房间。\n我躺在床上，随手打开手机，看了一眼股票软件。",
+    next: "morning01"
+  },
+
+  morning01: {
+    chapter: "第一章 · 早晨",
+    background: IMAGE.backgrounds.roomMorning,
+    character: IMAGE.characters.nangongFever,
+    speaker: "南宫",
+    text: "吴……",
+    next: "morning02"
+  },
+
+  morning02: {
+    chapter: "第一章 · 早晨",
+    background: IMAGE.backgrounds.roomMorning,
+    character: IMAGE.characters.nangongFever,
+    speaker: "南宫",
+    text: "我好像有点发烧。",
+    choices: [
+      {
+        text: "先让她躺下休息，然后去准备早餐。",
+        next: "morningMain",
+        effect: () => { state.careScore += 1; }
+      },
+      {
+        text: "先找体温计给她量体温。",
+        next: "morningTemperature"
+      },
+      {
+        text: "先给她倒杯温水。",
+        next: "morningWater",
+        effect: () => { state.careScore += 1; }
+      }
+    ]
+  },
+
+  morningMain: {
+    chapter: "第一章 · 早晨",
+    background: IMAGE.backgrounds.roomMorning,
+    character: IMAGE.characters.nangongTired,
+    speaker: "我",
+    text: "你先躺着吧。\n我去给你弄点吃的。",
+    next: "morningMain02"
+  },
+
+  morningMain02: {
+    chapter: "第一章 · 早晨",
+    background: IMAGE.backgrounds.roomMorning,
+    character: IMAGE.characters.nangongTired,
+    speaker: "南宫",
+    text: "嗯……你等会儿再过来看看我。",
+    next: "breakfast"
+  },
+
+  morningTemperature: {
+    chapter: "第一章 · 早晨",
+    background: IMAGE.backgrounds.roomMorning,
+    character: IMAGE.characters.nangongTired,
+    speaker: "我",
+    text: "先量一下体温。",
+    next: "thermometer"
+  },
+
+  morningWater: {
+    chapter: "第一章 · 早晨",
+    background: IMAGE.backgrounds.roomMorning,
+    character: IMAGE.characters.nangongTired,
+    speaker: "我",
+    text: "先喝点温水。",
+    next: "morningMain"
+  },
+
+  breakfast: {
+    chapter: "第一章 · 早餐",
+    background: IMAGE.backgrounds.kitchen,
+    character: null,
+    speaker: "我",
+    text: "我走进厨房。\n\n早饭吃什么？",
+    choices: [
+      {
+        text: "熬点粥，再配一点咸菜。",
+        next: "breakfastServe",
+        effect: () => { state.breakfast = "porridge"; }
+      },
+      {
+        text: "买几个包子。",
+        next: "breakfastServe",
+        effect: () => { state.breakfast = "baozi"; }
+      },
+      {
+        text: "出去买油条。",
+        next: "breakfastServe",
+        effect: () => { state.breakfast = "youtiao"; }
+      },
+      {
+        text: "买一份豆腐脑。",
+        next: "breakfastServe",
+        effect: () => { state.breakfast = "doufunao"; }
+      }
+    ]
+  },
+
+  breakfastServe: {
+    chapter: "第一章 · 早餐",
+    background: IMAGE.backgrounds.roomMorning,
+    character: IMAGE.characters.nangongFever,
+    speaker: "我",
+    text: "起来。吃点东西。",
+    next: "breakfastSick"
+  },
+
+  breakfastSick: {
+    chapter: "第一章 · 早餐",
+    background: IMAGE.backgrounds.roomMorning,
+    character: IMAGE.characters.nangongFever,
+    speaker: "南宫",
+    text: "我吃不下……\n\n嘴里有点苦，好像什么味道都尝不出来。",
+    choices: [
+      {
+        text: "那就先别吃了，让她休息。",
+        next: "thermometer",
+        effect: () => { state.careScore += 1; }
+      },
+      {
+        text: "多少还是吃一点吧。",
+        next: "eatLittle"
+      },
+      {
+        text: "先喝点水。",
+        next: "drinkWater"
+      }
+    ]
+  },
+
+  eatLittle: {
+    chapter: "第一章 · 早餐",
+    background: IMAGE.backgrounds.roomMorning,
+    character: IMAGE.characters.nangongFever,
+    speaker: "南宫",
+    text: "……我真的吃不下。",
+    next: "thermometer"
+  },
+
+  drinkWater: {
+    chapter: "第一章 · 早餐",
+    background: IMAGE.backgrounds.roomMorning,
+    character: IMAGE.characters.nangongFever,
+    speaker: "南宫",
+    text: "好。",
+    next: "thermometer"
+  },
+
+  thermometer: {
+    chapter: "第一章 · 体温",
+    background: IMAGE.backgrounds.roomMorning,
+    character: IMAGE.characters.nangongFever,
+    speaker: "我",
+    text: "先量一下体温。",
+    choices: [
+      {
+        text: "留下来等体温计。",
+        next: "thermometerResult",
+        effect: () => {
+          state.temperatureRoute = "stay";
+          state.careScore += 1;
+        }
+      },
+      {
+        text: "去把厨房收拾一下。",
+        next: "thermometerResult",
+        effect: () => { state.temperatureRoute = "kitchen"; }
+      },
+      {
+        text: "先去准备毛巾和水。",
+        next: "thermometerResult",
+        effect: () => {
+          state.temperatureRoute = "water";
+          state.careScore += 1;
+        }
+      }
+    ]
+  },
+
+  thermometerResult: {
+    chapter: "第一章 · 体温",
+    background: IMAGE.backgrounds.roomMorning,
+    character: IMAGE.characters.nangongFever,
+    speaker: "我",
+    text: "体温比正常值高了一些。\n\n看起来还是得去医院看看。",
+    next: "hospitalDecision"
+  },
+
+  hospitalDecision: {
+    chapter: "第一章 · 医院",
+    background: IMAGE.backgrounds.roomMorning,
+    character: IMAGE.characters.nangongTired,
+    speaker: "我",
+    text: "走吧，去医院。",
+    choices: [
+      {
+        text: "带她去医院。",
+        next: "hospital",
+        effect: () => { state.hospitalRoute = "hospital"; }
+      },
+      {
+        text: "再观察一会儿。",
+        next: "hospital",
+        effect: () => { state.hospitalRoute = "observe"; }
+      },
+      {
+        text: "直接去急诊。",
+        next: "hospital",
+        effect: () => { state.hospitalRoute = "emergency"; }
+      }
+    ]
+  },
+
+  hospital: {
+    chapter: "第二章 · 医院",
+    background: IMAGE.backgrounds.hospital,
+    character: IMAGE.characters.nangongTired,
+    speaker: "",
+    text: "医院里人很多。\n\n挂号、检查、排队……\n折腾了一阵之后，南宫的状态明显比早上更差了。",
+    next: "hospitalTemperature"
+  },
+
+  hospitalTemperature: {
+    chapter: "第二章 · 医院",
+    background: IMAGE.backgrounds.hospitalRoom,
+    character: IMAGE.characters.nangongFever,
+    speaker: "我",
+    text: "四十点一度。",
+    next: "bloodTest"
+  },
+
+  bloodTest: {
+    chapter: "第二章 · 医院",
+    background: IMAGE.backgrounds.hospital,
+    character: IMAGE.characters.nangongFever,
+    speaker: "医生",
+    text: "建议再做一下检查，抽血看一下具体情况。",
+    choices: [
+      {
+        text: "看排队的人太多，先去药店买退烧药。",
+        next: "pharmacy",
+        effect: () => {
+          state.bloodRoute = "pharmacy";
+          state.careScore += 1;
+        }
+      },
+      {
+        text: "留下来排队抽血。",
+        next: "bloodWait",
+        effect: () => { state.bloodRoute = "blood"; }
+      },
+      {
+        text: "再问一下医生是否必须抽血。",
+        next: "doctorQuestion",
+        effect: () => { state.bloodRoute = "ask"; }
+      }
+    ]
+  },
+
+  bloodWait: {
+    chapter: "第二章 · 医院",
+    background: IMAGE.backgrounds.hospital,
+    character: IMAGE.characters.nangongFever,
+    speaker: "南宫",
+    text: "还要等多久？",
+    next: "pharmacy"
+  },
+
+  doctorQuestion: {
+    chapter: "第二章 · 医院",
+    background: IMAGE.backgrounds.hospitalRoom,
+    character: IMAGE.characters.nangongFever,
+    speaker: "我",
+    text: "医生，如果现在先处理发烧，可以吗？",
+    next: "pharmacy"
+  },
+
+  pharmacy: {
+    chapter: "第三章 · 药店",
+    background: IMAGE.backgrounds.pharmacy,
+    character: null,
+    speaker: "我",
+    text: "买好退烧药以后，我们准备回去。",
+    next: "mall"
+  },
+
+  mall: {
+    chapter: "第三章 · 商场",
+    background: IMAGE.backgrounds.mall,
+    character: IMAGE.characters.nangongTired,
+    speaker: "南宫",
+    text: "等等。",
+    next: "movieTrailer"
+  },
+
+  movieTrailer: {
+    chapter: "第三章 · 商场",
+    background: IMAGE.backgrounds.mall,
+    character: IMAGE.characters.nangongHesitate,
+    speaker: "南宫",
+    text: "这个电影……\n\n我好像等了两个多月了。",
+    choices: [
+      {
+        text: "先把票留着，晚上八点再看情况。",
+        next: "movieKeep",
+        effect: () => { state.movieTicket = "keep"; }
+      },
+      {
+        text: "现在直接退票。",
+        next: "movieRefund",
+        effect: () => { state.movieTicket = "refund"; }
+      },
+      {
+        text: "让她自己决定。",
+        next: "movieKeep",
+        effect: () => { state.movieTicket = "herChoice"; }
+      }
+    ]
+  },
+
+  movieKeep: {
+    chapter: "第三章 · 商场",
+    background: IMAGE.backgrounds.mall,
+    character: IMAGE.characters.nangongHesitate,
+    speaker: "我",
+    text: "先休息。\n晚上八点再看，如果身体允许，就去。",
+    next: "foxScene"
+  },
+
+  movieRefund: {
+    chapter: "第三章 · 商场",
+    background: IMAGE.backgrounds.mall,
+    character: IMAGE.characters.nangongTired,
+    speaker: "南宫",
+    text: "……好吧。\n\n既然退掉了，那今天就不去了。",
+    next: "foxScene"
+  },
+
+  foxScene: {
+    chapter: "第四章 · 狐狸",
+    background: IMAGE.backgrounds.foxRoom,
+    character: null,
+    speaker: "",
+    text: "回去之后，房间里很安静。\n\n阿紫趴在靠窗的位置晒太阳。\n阿狸听到动静，立刻跑了过来。",
+    choices: [
+      {
+        text: "先看看阿紫和阿狸。",
+        next: "foxAzhi",
+        effect: () => { state.foxRoute = "both"; }
+      },
+      {
+        text: "先看看阿紫。",
+        next: "foxAzhi",
+        effect: () => { state.foxRoute = "azhi"; }
+      },
+      {
+        text: "先陪阿狸玩一会儿。",
+        next: "foxAli",
+        effect: () => { state.foxRoute = "ali"; }
+      }
+    ]
+  },
+
+  foxAzhi: {
+    chapter: "第四章 · 狐狸",
+    background: IMAGE.backgrounds.foxRoom,
+    character: null,
+    speaker: "",
+    text: "阿紫抬起头看了我一眼。\n\n它没有说话，只是安静地看着我，然后又慢慢趴回了阳光里。",
+    next: "foxAli"
+  },
+
+  foxAli: {
+    chapter: "第四章 · 狐狸",
+    background: IMAGE.backgrounds.foxRoom,
+    character: null,
+    speaker: "",
+    text: "阿狸在旁边跑来跑去。\n\n它绕着房间转了一圈，又跑回来，好奇地看着周围。",
+    next: "eveningGate"
+  },
+
+  eveningGate: {
+    chapter: "第五章 · 晚上",
+    background: IMAGE.backgrounds.roomNight,
+    character: IMAGE.characters.nangongTired,
+    speaker: "",
+    text: "",
+    resolveNext: () => state.movieTicket === "refund" ? "eveningNoTicket" : "evening"
+  },
+
+  evening: {
+    chapter: "第五章 · 晚上",
+    background: IMAGE.backgrounds.roomNight,
+    character: IMAGE.characters.nangongTired,
+    speaker: "南宫",
+    text: "已经快八点了。",
+    next: "eveningCheck"
+  },
+
+  eveningCheck: {
+    chapter: "第五章 · 晚上",
+    background: IMAGE.backgrounds.roomNight,
+    character: IMAGE.characters.nangongHesitate,
+    speaker: "南宫",
+    text: "电影……还去吗？",
+    choices: [
+      {
+        text: "看一下情况，如果身体允许就去。",
+        next: "cinema",
+        effect: () => { state.movieRoute = "go"; }
+      },
+      {
+        text: "今天还是别去了。",
+        next: "noCinema",
+        effect: () => { state.movieRoute = "cancel"; }
+      },
+      {
+        text: "再休息半小时再决定。",
+        next: "cinema",
+        effect: () => { state.movieRoute = "wait"; }
+      }
+    ]
+  },
+
+  eveningNoTicket: {
+    chapter: "第五章 · 晚上",
+    background: IMAGE.backgrounds.roomNight,
+    character: IMAGE.characters.nangongTired,
+    speaker: "南宫",
+    text: "已经快八点了。\n\n不过电影票已经退掉了。\n今天就好好休息吧。",
+    next: "homeNight"
+  },
+
+  noCinema: {
+    chapter: "第五章 · 晚上",
+    background: IMAGE.backgrounds.roomNight,
+    character: IMAGE.characters.nangongTired,
+    speaker: "南宫",
+    text: "……好。\n\n那就不去了，今天先好好休息。",
+    next: "homeNight"
+  },
+
+  cinema: {
+    chapter: "第五章 · 电影院",
+    background: IMAGE.backgrounds.cinema,
+    character: IMAGE.characters.nangongHappy,
+    speaker: "南宫",
+    text: "电影开始了。",
+    next: "cinemaReaction"
+  },
+
+  cinemaReaction: {
+    chapter: "第五章 · 电影院",
+    background: IMAGE.backgrounds.cinema,
+    character: IMAGE.characters.nangongHappy,
+    speaker: "我",
+    text: "她难得这么专心地看着电影。\n\n虽然身体还是不舒服，但注意力已经完全放在了银幕上。",
+    choices: [
+      {
+        text: "安静地陪她把电影看完。",
+        next: "returnHome"
+      },
+      {
+        text: "中途问一下她身体怎么样。",
+        next: "cinemaHealth"
+      },
+      {
+        text: "提醒她不要看得太晚。",
+        next: "returnHome"
+      }
+    ]
+  },
+
+  cinemaHealth: {
+    chapter: "第五章 · 电影院",
+    background: IMAGE.backgrounds.cinema,
+    character: IMAGE.characters.nangongTired,
+    speaker: "南宫",
+    text: "还行。\n\n让我看完吧。",
+    next: "returnHome"
+  },
+
+  returnHome: {
+    chapter: "第六章 · 回家",
+    background: IMAGE.backgrounds.streetNight,
+    character: IMAGE.characters.nangongTired,
+    speaker: "",
+    text: "电影结束以后，已经很晚了。\n\n我们走在回家的路上。",
+    choices: [
+      {
+        text: "按照平时的路线回去。",
+        next: "alley",
+        effect: () => { state.homeRoute = "normal"; }
+      },
+      {
+        text: "走另一条路。",
+        next: "alley",
+        effect: () => { state.homeRoute = "other"; }
+      },
+      {
+        text: "找个地方休息一下再走。",
+        next: "alley",
+        effect: () => { state.homeRoute = "rest"; }
+      }
+    ]
+  },
+
+  alley: {
+    chapter: "第七章 · 小巷",
+    background: IMAGE.backgrounds.alley,
+    character: null,
+    speaker: "",
+    text: "夜里的小巷很安静。\n\n走到一半，前面出现了两个人。\n\n其中一个拦住了路。\n\n“把钱拿出来。”",
+    choices: [
+      {
+        text: "把装着东西的蓝紫色背包扔过去。",
+        next: "alleyMain",
+        effect: () => { state.alleyRoute = "bag"; }
+      },
+      {
+        text: "和他们解释。",
+        next: "alleyArgument",
+        effect: () => { state.alleyRoute = "talk"; }
+      },
+      {
+        text: "转身往回跑。",
+        next: "alleyRun",
+        effect: () => { state.alleyRoute = "run"; }
+      }
+    ]
+  },
+
+  alleyMain: {
+    chapter: "第七章 · 小巷",
+    background: IMAGE.backgrounds.alley,
+    character: null,
+    speaker: "",
+    text: "身边的南宫像是已经睡着了。\n\n我没有出声，只是停了一下。\n\n她的手臂却下意识地收紧了一点。",
+    next: "alleyMain02"
+  },
+
+  alleyMain02: {
+    chapter: "第七章 · 小巷",
+    background: IMAGE.backgrounds.alley,
+    character: null,
+    speaker: "我",
+    text: "我把蓝紫色的背包扔了过去。\n\n“拿去。”\n\n背包里装着退烧药、体温计、口罩、五千块钱，还有刚看完电影留下的电影票和票根。",
+    next: "alleyMain03"
+  },
+
+  alleyMain03: {
+    chapter: "第七章 · 小巷",
+    background: IMAGE.backgrounds.alley,
+    character: null,
+    speaker: "",
+    text: "两个人捡起背包，翻了翻里面的东西。\n\n确认里面确实有钱以后，他们没有再说什么，很快离开了小巷。\n\n脚步声渐渐远去。",
+    next: "alleyEscape"
+  },
+
+  alleyArgument: {
+    chapter: "第七章 · 小巷",
+    background: IMAGE.backgrounds.alley,
+    character: null,
+    speaker: "",
+    text: "我试着和他们解释。\n\n两个人明显没有耐心。\n\n我看了一眼身边的南宫，最后还是把蓝紫色的背包扔了过去。",
+    next: "alleyMain03"
+  },
+
+  alleyRun: {
+    chapter: "第七章 · 小巷",
+    background: IMAGE.backgrounds.alley,
+    character: null,
+    speaker: "",
+    text: "我转身想往回跑。\n\n可身边的南宫还在发着烧，身后的脚步声也越来越近。\n\n我停了下来，把蓝紫色的背包扔了过去。",
+    next: "alleyMain03"
+  },
+
+  alleyEscape: {
+    chapter: "第七章 · 夜路",
+    background: IMAGE.backgrounds.streetNight,
+    character: IMAGE.characters.nangongTired,
+    speaker: "南宫",
+    text: "……下次不要这样了。",
+    next: "homeNight"
+  },
+
+  homeNight: {
+    chapter: "第八章 · 回家",
+    background: IMAGE.backgrounds.roomNight,
+    character: IMAGE.characters.nangongFever,
+    speaker: "我",
+    text: "回家以后再量一下体温。",
+    next: "homeTemperature"
+  },
+
+  homeTemperature: {
+    chapter: "第八章 · 回家",
+    background: IMAGE.backgrounds.roomNight,
+    character: IMAGE.characters.nangongFever,
+    speaker: "",
+    text: "38.6℃。",
+    next: "homeCare"
+  },
+
+  homeCare: {
+    chapter: "第八章 · 回家",
+    background: IMAGE.backgrounds.roomNight,
+    character: IMAGE.characters.nangongTired,
+    speaker: "我",
+    text: () => state.careScore >= 3
+      ? "把药吃了，喝点水，然后好好休息。"
+      : "把药吃了，然后好好休息。",
+    choices: [
+      {
+        text: "让她吃药、喝水，然后休息。",
+        next: "sleepScene",
+        effect: () => {
+          state.homeCare = "medicine";
+          state.careScore += 1;
+        }
+      },
+      {
+        text: "先让她睡觉。",
+        next: "sleepScene",
+        effect: () => { state.homeCare = "sleep"; }
+      },
+      {
+        text: "再量一次体温确认。",
+        next: "sleepScene",
+        effect: () => { state.homeCare = "temperature"; }
+      }
+    ]
+  },
+
+  sleepScene: {
+    chapter: "第八章 · 夜晚",
+    background: IMAGE.backgrounds.roomNight,
+    character: IMAGE.characters.nangongTired,
+    speaker: "",
+    text: "南宫慢慢睡着了。\n\n房间重新安静下来。",
+    choices: [
+      {
+        text: "坐在旁边看着她，等她睡熟。",
+        next: "finalQuestion"
+      },
+      {
+        text: "把房间简单收拾一下。",
+        next: "finalQuestion"
+      },
+      {
+        text: "自己也早点休息。",
+        next: "finalQuestion"
+      }
+    ]
+  },
+
+  finalQuestion: {
+    chapter: "第九章 · 夜晚",
+    background: IMAGE.backgrounds.roomNight,
+    character: IMAGE.characters.nangongTired,
+    speaker: "南宫",
+    text: "你说……\n\n以后，还会记得这个晚上吗？",
+    choices: [
+      {
+        text: "没有回答。",
+        next: "dream01",
+        effect: () => { state.finalAnswer = "silent"; }
+      },
+      {
+        text: "会记得。",
+        next: "dream01",
+        effect: () => { state.finalAnswer = "remember"; }
+      },
+      {
+        text: "应该会吧。",
+        next: "dream01",
+        effect: () => { state.finalAnswer = "maybe"; }
+      }
+    ]
+  },
+
+  dream01: {
+    chapter: "终章 · 梦醒",
+    background: IMAGE.backgrounds.dorm,
+    character: null,
+    speaker: "",
+    text: "很多年以后。\n\n刺眼的阳光从窗外照进来。\n\n哨声响起。\n\n我猛地睁开眼。",
+    next: "dream02"
+  },
+
+  dream02: {
+    chapter: "终章 · 梦醒",
+    background: IMAGE.backgrounds.dorm,
+    character: null,
+    speaker: "",
+    text: "这里是宿舍。\n\n刚才的一切……\n原来只是一场梦。",
+    next: "dream03"
+  },
+
+  dream03: {
+    chapter: "终章 · 梦醒",
+    background: IMAGE.backgrounds.corridor,
+    character: null,
+    speaker: "",
+    text: "没有电影票。\n没有蓝紫色的背包。\n没有那五千块钱。\n也没有阿紫和阿狸。",
+    next: "ending"
+  },
+
+  ending: {
+    chapter: "终章",
+    background: IMAGE.backgrounds.corridor,
+    character: null,
+    speaker: "",
+    text: "可是那个晚上，我好像真的记得。\n\n记得电影院里的灯光。\n记得夜里的街道。\n也记得有人问过我——\n\n“以后，还会记得这个晚上吗？”\n\n我没有回答。",
+    ending: true
+  }
+};
+
+/* =========================================================
+   统一节点解析
+   不再修改 story，不再包装 renderNode。
+========================================================= */
+
+function resolveNodeId(id) {
+  const node = story[id];
+
+  if (!node) return null;
+
+  if (typeof node.resolveNext === "function") {
+    return node.resolveNext();
+  }
+
+  return id;
+}
+
+function resolveNodeText(node) {
+  if (!node) return "";
+  return typeof node.text === "function" ? node.text() : (node.text || "");
+}
+
+function preloadNextAssets(node) {
+  if (!node) return;
+
+  const ids = [];
+
+  if (node.next) ids.push(node.next);
+  if (typeof node.resolveNext === "function") {
+    const resolved = resolveNodeId(runtime.currentNodeId);
+    if (resolved && resolved !== runtime.currentNodeId) ids.push(resolved);
+  }
+
+  if (Array.isArray(node.choices)) {
+    node.choices.forEach((choice) => ids.push(choice.next));
+  }
+
+  ids.forEach((id) => {
+    const target = story[id];
+    if (!target) return;
+    if (target.background) preloadImage(target.background);
+    if (target.character) preloadImage(target.character);
+  });
+}
+
+/* =========================================================
+   唯一渲染器
+========================================================= */
+
+async function renderNode(id, token) {
+  const node = story[id];
+
+  if (!node) {
+    console.error("[墨南宫] 不存在的剧情节点：", id);
+    runtime.transitionBusy = false;
+    return;
+  }
+
+  runtime.currentNodeId = id;
+
+  hideChoices();
+  showDialogue();
+
+  elements.chapterLabel.textContent = node.chapter || "";
+  elements.speakerName.textContent = node.speaker || "";
+  elements.speakerName.classList.toggle("is-empty", !node.speaker);
+
+  const resolvedText = resolveNodeText(node);
+
+  await Promise.all([
+    setBackground(node.background),
+    setCharacter(node.character || null)
+  ]);
+
+  if (token !== runtime.transitionToken) return;
+
+  startTyping(resolvedText);
+  preloadNextAssets(node);
+
+  runtime.transitionBusy = false;
+  elements.transitionCover.style.opacity = "0";
+}
+
+/* =========================================================
+   唯一导航器
+   所有剧情跳转只能经过这里。
+========================================================= */
+
+function navigateToSafe(id) {
+  if (!id || runtime.transitionBusy) return;
+
+  const resolvedId = resolveNodeId(id);
+
+  if (!resolvedId || !story[resolvedId]) {
+    console.error("[墨南宫] 无法跳转：", id);
+    return;
+  }
+
+  clearTyping();
+  hideChoices();
+
+  runtime.transitionBusy = true;
+  runtime.transitionToken += 1;
+
+  const token = runtime.transitionToken;
+  elements.transitionCover.style.opacity = "1";
+
+  window.setTimeout(() => {
+    if (token !== runtime.transitionToken) return;
+
+    renderNode(resolvedId, token).catch((error) => {
+      console.error("[墨南宫] 渲染失败：", error);
+      runtime.transitionBusy = false;
+      elements.transitionCover.style.opacity = "0";
+    });
+  }, TRANSITION_MS);
+}
+
+/* =========================================================
+   唯一选择渲染器
+========================================================= */
+
+function renderChoices(choices) {
+  if (!Array.isArray(choices) || choices.length === 0) return;
+  if (runtime.transitionBusy || runtime.isTyping) return;
+
+  runtime.choiceLocked = false;
+  hideDialogue();
+  elements.choicePanel.replaceChildren();
+
+  choices.forEach((choice, index) => {
+    const button = document.createElement("button");
+
+    button.type = "button";
+    button.className = "choice-button";
+    button.textContent = `${index + 1}. ${choice.text}`;
+
+    button.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+
+      if (runtime.choiceLocked || runtime.transitionBusy) return;
+
+      runtime.choiceLocked = true;
+      button.disabled = true;
+
+      try {
+        if (typeof choice.effect === "function") {
+          choice.effect();
+        }
+      } catch (error) {
+        console.error("[墨南宫] 选项 effect 执行失败：", error);
+      }
+
+      hideChoices();
+      navigateToSafe(choice.next);
+    });
+
+    elements.choicePanel.appendChild(button);
+  });
+
+  elements.choicePanel.classList.remove("is-hidden");
+}
+
+/* =========================================================
+   唯一对白推进器
+========================================================= */
+
+function handleAdvance() {
+  if (runtime.transitionBusy) return;
+
+  if (runtime.isTyping) {
+    finishTyping();
+    return;
+  }
+
+  const node = story[runtime.currentNodeId];
+
+  if (!node) return;
+
+  if (Array.isArray(node.choices) && node.choices.length > 0) {
+    renderChoices(node.choices);
+    return;
+  }
+
+  if (node.ending) {
+    showEndScreen();
+    return;
+  }
+
+  if (node.next) {
+    navigateToSafe(node.next);
+  }
+}
+
+/* =========================================================
+   开始 / 重开
+========================================================= */
+
+function startGameSafe() {
+  clearTyping();
+  resetGameState();
+
+  runtime.currentNodeId = null;
+  runtime.fullText = "";
+  runtime.transitionBusy = false;
+  runtime.transitionToken += 1;
+  runtime.choiceLocked = true;
+  runtime.activeBackgroundLayer = elements.backgroundFront;
+  runtime.activeCharacterLayer = elements.characterFront;
+
+  elements.startScreen.classList.add("is-hidden");
+  elements.endScreen.classList.add("is-hidden");
+
+  elements.characterFront.classList.remove("is-visible");
+  elements.characterBack.classList.remove("is-visible");
+  elements.characterFront.removeAttribute("src");
+  elements.characterBack.removeAttribute("src");
+
+  hideChoices();
+  showDialogue();
+
+  navigateToSafe("start");
+}
+
+/* =========================================================
+   事件绑定：只绑定一次
+========================================================= */
+
+elements.startButton.addEventListener("click", (event) => {
+  event.preventDefault();
+  event.stopPropagation();
+  startGameSafe();
+});
+
+elements.restartButton.addEventListener("click", (event) => {
+  event.preventDefault();
+  event.stopPropagation();
+  startGameSafe();
+});
+
+/* 对话框本身可点击 */
+elements.dialogueBox.addEventListener("click", (event) => {
+  event.preventDefault();
+  event.stopPropagation();
+  handleAdvance();
+});
+
+/* 游戏空白区域也可以推进，但不会抢选项点击 */
+elements.game.addEventListener("click", (event) => {
+  if (event.target.closest(".choice-button")) return;
+  if (event.target.closest("#startScreen")) return;
+  if (event.target.closest("#endScreen")) return;
+  if (event.target.closest("#dialogueBox")) return;
+
+  if (!elements.endScreen.classList.contains("is-hidden")) return;
+
+  handleAdvance();
+});
+
+/* 键盘 */
+document.addEventListener("keydown", (event) => {
+  if (event.code !== "Enter" && event.code !== "Space") return;
+
+  event.preventDefault();
+
+  if (!elements.startScreen.classList.contains("is-hidden")) {
+    startGameSafe();
+    return;
+  }
+
+  if (!elements.endScreen.classList.contains("is-hidden")) {
+    startGameSafe();
+    return;
+  }
+
+  handleAdvance();
+});
+
+/* ---------- 首屏预加载 ---------- */
+preloadImage(IMAGE.backgrounds.roomMorning);
+preloadImage(IMAGE.characters.nangongFever);
+
+console.info("[墨南宫] V7 已加载：单一导航 / 单一推进 / 单一渲染 / 180ms 统一转场");
+</script>
+</body>
+</html>
